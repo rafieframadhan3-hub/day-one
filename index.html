@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Arena Legends - Multi-Mode Edition</title>
+
+<!-- PeerJS untuk Multiplayer P2P -->
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    user-select:none;
+    -webkit-user-select:none;
+    -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#07111d;
+    font-family:Arial,sans-serif;
+}
+
+#game{
+    position:fixed;
+    inset:0;
+}
+
+canvas{
+    display:block;
+}
+
+.screen{
+    position:fixed;
+    inset:0;
+    z-index:50;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:16px;
+}
+
+.hidden{
+    display:none!important;
+}
+
+.panel{
+    width:min(94vw,500px);
+    max-height:92vh;
+    overflow-y:auto;
+    padding:20px;
+    border-radius:22px;
+    background:linear-gradient(145deg, rgba(14,31,50,.97), rgba(3,10,18,.98));
+    border:1px solid rgba(100,190,255,.25);
+    box-shadow:0 30px 80px rgba(0,0,0,.7);
+}
+
+.logo{
+    text-align:center;
+    font-size:32px;
+    font-weight:900;
+    color:white;
+    letter-spacing:3px;
+    text-shadow:0 0 15px #21a9ff, 0 0 40px #006eff;
+}
+
+.sub{
+    text-align:center;
+    color:#7f91a6;
+    font-size:11px;
+    letter-spacing:2px;
+    margin:3px 0 12px;
+}
+
+button{
+    border:0;
+    color:white;
+    font-weight:bold;
+    cursor:pointer;
+}
+
+.menuBtn{
+    width:100%;
+    padding:12px;
+    margin:4px 0;
+    border-radius:12px;
+    background:linear-gradient(135deg, #1468bb, #18a7ed);
+    font-size:13px;
+}
+
+.menuBtn:active{
+    transform:scale(.97);
+}
+
+.secondary{
+    background:linear-gradient(135deg, #18293b, #29445c);
+}
+
+.modeGrid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:6px;
+    margin:8px 0;
+}
+
+.modeBtn{
+    padding:10px;
+    border-radius:10px;
+    background:#0e2338;
+    border:1px solid rgba(0,170,255,.3);
+    color:#fff;
+    font-size:12px;
+    font-weight:bold;
+}
+
+.modeBtn.active{
+    background:linear-gradient(135deg, #0088ff, #00d4ff);
+    border-color:#fff;
+}
+
+.classGrid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:6px;
+    margin:8px 0;
+    max-height:120px;
+    overflow-y:auto;
+    padding-right:4px;
+}
+
+.classCard{
+    background:#0d1b2a;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:8px;
+    padding:6px;
+    text-align:center;
+    cursor:pointer;
+}
+
+.classCard.active{
+    border-color:#00aaff;
+    background:#163252;
+}
+
+.classCard b{
+    display:block;
+    color:#fff;
+    font-size:11px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+/* Panel Deskripsi Karakter */
+.heroDetailBox{
+    background:#0a1829;
+    border:1px solid #1c3d61;
+    border-radius:12px;
+    padding:10px;
+    margin:8px 0 12px;
+}
+
+.heroTitle{
+    color:#00d4ff;
+    font-size:14px;
+    font-weight:bold;
+    display:flex;
+    justify-content:space-between;
+}
+
+.heroLore{
+    color:#94a8c0;
+    font-size:11px;
+    margin:4px 0 8px;
+    line-height:1.3;
+}
+
+.heroSkillsList{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.skillItem{
+    background:rgba(255,255,255,.04);
+    padding:5px 8px;
+    border-radius:6px;
+    font-size:10px;
+    color:#d0e3ff;
+}
+
+.skillItem b{
+    color:#ffd700;
+}
+
+.setting-item{
+    margin:10px 0;
+    color:#fff;
+    font-size:12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.setting-item input[type=range]{
+    width:55%;
+}
+
+.textInput{
+    width:100%;
+    padding:10px;
+    margin:8px 0;
+    border-radius:10px;
+    border:1px solid #1f4268;
+    background:#0a1526;
+    color:#fff;
+    text-align:center;
+    font-size:15px;
+    letter-spacing:2px;
+}
+
+.roomBox{
+    background:#0b1929;
+    border:1px dashed #00aaff;
+    padding:12px;
+    border-radius:12px;
+    text-align:center;
+    margin:12px 0;
+    color:#fff;
+}
+
+.roomCode{
+    font-size:22px;
+    font-weight:bold;
+    color:#00aaff;
+    letter-spacing:4px;
+    margin:6px 0;
+}
+
+/* HUD */
+#hud{
+    position:fixed;
+    inset:0;
+    z-index:20;
+    pointer-events:none;
+}
+
+#top{
+    position:absolute;
+    left:12px;
+    right:12px;
+    top:12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+}
+
+.status{
+    width:150px;
+}
+
+.statusName{
+    color:white;
+    font-size:11px;
+    font-weight:bold;
+    margin-bottom:3px;
+    text-shadow:0 2px 4px black;
+}
+
+.bar{
+    height:8px;
+    margin-bottom:3px;
+    border-radius:20px;
+    overflow:hidden;
+    background:rgba(0,0,0,.6);
+}
+
+.hp{
+    height:100%;
+    width:100%;
+    background:linear-gradient(90deg,#ff2948,#ff7344);
+    transition:width .1s;
+}
+
+.energy{
+    height:100%;
+    width:100%;
+    background:linear-gradient(90deg,#198eff,#b05dff);
+    transition:width .1s;
+}
+
+#arenaInfo{
+    padding:6px 14px;
+    border-radius:20px;
+    background:rgba(0,0,0,.5);
+    color:white;
+    font-size:11px;
+    font-weight:bold;
+    text-align:center;
+    border:1px solid rgba(255,255,255,.2);
+}
+
+/* Joystick */
+#joystick{
+    position:absolute;
+    pointer-events:auto;
+    left:20px;
+    bottom:20px;
+    width:130px;
+    height:130px;
+    border-radius:50%;
+    background:rgba(255,255,255,.06);
+    border:2px solid rgba(255,255,255,.15);
+    touch-action:none;
+}
+
+#stick{
+    position:absolute;
+    left:36px;
+    top:36px;
+    width:54px;
+    height:54px;
+    border-radius:50%;
+    background:radial-gradient(circle, #bcecff, #2c71ad);
+    box-shadow:0 5px 15px #0008;
+    transform:translate3d(0,0,0);
+}
+
+/* Camera Area */
+#cameraArea{
+    position:absolute;
+    pointer-events:auto;
+    touch-action:none;
+    left:25%;
+    top:10%;
+    right:0;
+    bottom:25%;
+}
+
+/* Skills */
+#skills{
+    position:absolute;
+    right:12px;
+    bottom:20px;
+    display:flex;
+    gap:8px;
+    pointer-events:auto;
+}
+
+.skill{
+    position:relative;
+    width:56px;
+    height:56px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,.35);
+    background:radial-gradient(circle at 35% 30%, #73d4ff, #16528b);
+    font-size:11px;
+    font-weight:bold;
+    color:white;
+    touch-action:manipulation;
+}
+
+.skill:nth-child(2){ background:radial-gradient(circle at 35% 30%, #ffe36b, #a54117); }
+.skill:nth-child(3){ background:radial-gradient(circle at 35% 30%, #ff8be1, #81166c); }
+.skill:nth-child(4){ background:radial-gradient(circle at 35% 30%, #b4ff83, #287541); }
+
+.cd{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:rgba(0,0,0,.75);
+    font-size:13px;
+    color:#00e1ff;
+}
+
+#damage{
+    position:absolute;
+    left:50%;
+    top:40%;
+    transform:translate(-50%,-50%);
+    color:white;
+    font-size:26px;
+    font-weight:900;
+    text-shadow:0 0 10px red, 0 3px 5px black;
+    pointer-events:none;
+}
+
+.resultTitle{
+    text-align:center;
+    font-size:38px;
+    font-weight:900;
+}
+
+.resultText{
+    text-align:center;
+    margin:8px 0 20px;
+    color:#91a1b2;
+    font-size:13px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="game"></div>
+
+<!-- MAIN MENU -->
+<div id="main" class="screen">
+<div class="panel">
+    <div class="logo">ARENA</div>
+    <div class="sub">SUPREME BATTLE WORLDS</div>
+
+    <div style="color:#00aaff; font-size:11px; font-weight:bold; margin-bottom:4px;">PILIH MODE GAME:</div>
+    <div class="modeGrid">
+        <button class="modeBtn active" data-mode="1v1">1 vs 1</button>
+        <button class="modeBtn" data-mode="2v2">2 vs 2</button>
+        <button class="modeBtn" data-mode="3v3">3 vs 3</button>
+        <button class="modeBtn" data-mode="4v4">4 vs 4</button>
+    </div>
+    <button class="modeBtn" style="width:100%; margin-bottom:8px; background:linear-gradient(135deg, #a114bb, #ed1882);" data-mode="BR">👑 BATTLE ROYALE (36 FIGHTERS)</button>
+
+    <div style="color:#00aaff; font-size:11px; font-weight:bold;">PILIH HERO CLASS:</div>
+    <div id="classGrid" class="classGrid"></div>
+
+    <!-- Panel Detail Hero -->
+    <div id="heroDetail" class="heroDetailBox"></div>
+
+    <button id="playBtn" class="menuBtn">MULAI PERTANDINGAN</button>
+    <button id="multiplayerBtn" class="menuBtn secondary">MULTIPLAYER 1v1 (P2P)</button>
+    <button id="settingsBtn" class="menuBtn secondary">⚙️ PENGATURAN</button>
+</div>
+</div>
+
+<!-- LOBBY MULTIPLAYER -->
+<div id="mpLobby" class="screen hidden">
+<div class="panel">
+    <div class="logo" style="font-size:26px">MULTIPLAYER</div>
+    <div class="sub">1v1 ONLINE MATCH</div>
+
+    <button id="createRoomBtn" class="menuBtn">BUAT ROOM BARU</button>
+    <div style="margin: 10px 0 2px; color:#7f91a6; font-size:10px; text-align:center;">--- ATAU ---</div>
+    <input type="text" id="joinRoomInput" class="textInput" placeholder="MASUKKAN ID ROOM" maxlength="5">
+    <button id="joinRoomBtn" class="menuBtn">JOIN ROOM</button>
+    <button id="backFromMp" class="menuBtn secondary">KEMBALI</button>
+</div>
+</div>
+
+<!-- ROOM WAITING -->
+<div id="roomWait" class="screen hidden">
+<div class="panel">
+    <div class="logo" style="font-size:22px">RUANG TUNGGU</div>
+    <div class="sub">BAGIKAN KODE INI KE TEMANMU</div>
+
+    <div class="roomBox">
+        <div>ID ROOM KAMU:</div>
+        <div id="displayRoomCode" class="roomCode">-----</div>
+        <small style="color:#7f91a6">Menunggu Player 2 bergabung...</small>
+    </div>
+
+    <button id="startMpMatchBtn" class="menuBtn hidden">MULAI PERMAINAN</button>
+    <button id="cancelRoomBtn" class="menuBtn secondary">BATALKAN</button>
+</div>
+</div>
+
+<!-- SETTINGS MENU -->
+<div id="settingsMenu" class="screen hidden">
+<div class="panel">
+    <div class="logo" style="font-size:24px">PENGATURAN</div>
+    <div class="sub">AUDIO & KONTROL</div>
+
+    <div class="setting-item">
+        <span>Volume BGM</span>
+        <input type="range" id="bgmVol" min="0" max="100" value="35">
+    </div>
+
+    <div class="setting-item">
+        <span>Volume SFX</span>
+        <input type="range" id="sfxVol" min="0" max="100" value="80">
+    </div>
+
+    <div class="setting-item">
+        <span>Sensitivitas Kamera</span>
+        <input type="range" id="sensVol" min="1" max="10" value="7">
+    </div>
+
+    <button id="saveSettingsBtn" class="menuBtn" style="margin-top:15px;">SIMPAN & KEMBALI</button>
+</div>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+    <div id="top">
+        <div class="status">
+            <div id="pClassName" class="statusName">YOU</div>
+            <div class="bar"><div id="myHP" class="hp"></div></div>
+            <div class="bar"><div id="myEnergy" class="energy"></div></div>
+        </div>
+
+        <div id="arenaInfo">MODE 1v1</div>
+
+        <div class="status">
+            <div class="statusName" style="text-align:right" id="enemyClassName">TARGET</div>
+            <div class="bar"><div id="enemyHP" class="hp"></div></div>
+        </div>
+    </div>
+
+    <div id="damage"></div>
+    <div id="cameraArea"></div>
+
+    <div id="joystick">
+        <div id="stick"></div>
+    </div>
+
+    <div id="skills">
+        <button id="s1" class="skill">S1<span class="cd hidden"></span></button>
+        <button id="s2" class="skill">S2<span class="cd hidden"></span></button>
+        <button id="s3" class="skill">ULTI<span class="cd hidden"></span></button>
+        <button id="dash" class="skill">⚡<span class="cd hidden"></span></button>
+    </div>
+</div>
+
+<!-- RESULT -->
+<div id="result" class="screen hidden">
+<div class="panel">
+    <div id="resultTitle" class="resultTitle">VICTORY</div>
+    <div id="resultText" class="resultText">Battle selesai</div>
+    <button id="again" class="menuBtn">PLAY AGAIN</button>
+    <button id="menuAgain" class="menuBtn secondary">MAIN MENU</button>
+</div>
+</div>
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+
+/* ======================================================
+   GAME CONFIG & UNIQUE CHARACTER LORE & SKILL DATA
+====================================================== */
+const CFG = {
+    arena: 110,
+    cameraSmooth: 8.0,
+    cameraSensitivity: .0065, // Tingkatkan Sensitivitas Kamera
+    cameraDistance: 11,
+    cameraMin: .1,
+    cameraMax: 1.35
+};
+
+const CLASSES = [
+    {
+        name: "Warrior", color: 0x2299ff, hp: 100, speed: 10, type: "Melee",
+        lore: "Petarung seimbang dari Kerajaan Barat yang menguasai pedang ganda.",
+        s1: { name: "Slash Burst", dmg: 18, range: 8, cd: 1.5, cost: 15, desc: "Sabetan pedang jarak dekat yang cepat." },
+        s2: { name: "Shield Wave", dmg: 28, range: 11, cd: 4, cost: 25, desc: "Gelombang dorongan perisai area." },
+        s3: { name: "Blade Tempest", dmg: 52, range: 14, cd: 8, cost: 40, desc: "Badai pedang yang menghantam semua musuh sekeliling." }
+    },
+    {
+        name: "Berserker", color: 0xcc2222, hp: 125, speed: 9.5, type: "Melee",
+        lore: "Prajurit berdarah panas yang semakin kuat saat amarah bertambah.",
+        s1: { name: "Heavy Cleave", dmg: 24, range: 7, cd: 2, cost: 15, desc: "Tebasan kapak berat berkerusakan tinggi." },
+        s2: { name: "Rage Slam", dmg: 35, range: 10, cd: 4.5, cost: 25, desc: "Hantaman tanah yang memicu ledakan lokal." },
+        s3: { name: "Blood Rampage", dmg: 65, range: 12, cd: 9, cost: 45, desc: "Amukan mematikan dengan damage brutal." }
+    },
+    {
+        name: "Paladin", color: 0xffd700, hp: 145, speed: 8, type: "Melee-Tank",
+        lore: "Ksatria suci bertopeng emas yang kebal terhadap kegelapan.",
+        s1: { name: "Holy Strike", dmg: 16, range: 8, cd: 1.5, cost: 12, desc: "Pukulan cahaya suci." },
+        s2: { name: "Radiant Aura", dmg: 26, range: 12, cd: 4, cost: 20, desc: "Aura suci yang merusak musuh di sekitarnya." },
+        s3: { name: "Divine Judgment", dmg: 48, range: 15, cd: 8, cost: 38, desc: "Hukuman langit berkekuatan penuh." }
+    },
+    {
+        name: "Shadow Ninja", color: 0x333333, hp: 80, speed: 13.5, type: "Agile",
+        lore: "Pembunuh bayangan melesat secepat kilat untuk menebas target.",
+        s1: { name: "Shuriken Throw", dmg: 15, range: 12, cd: 1, cost: 10, desc: "Lemparan shuriken cepat jarak jauh." },
+        s2: { name: "Shadow Step", dmg: 32, range: 9, cd: 3.5, cost: 22, desc: "Melesat dan menusuk titik vital musuh." },
+        s3: { name: "Death Lotus", dmg: 58, range: 13, cd: 7, cost: 40, desc: "Tarian pisau bayangan berkecepatan tinggi." }
+    },
+    {
+        name: "Pyromancer", color: 0xff5500, hp: 85, speed: 9.5, type: "Mage",
+        lore: "Penyihir api pencetus kehancuran dari kawah magma.",
+        s1: { name: "Fireball", dmg: 22, range: 14, cd: 1.8, cost: 18, desc: "Tembakan bola api peledak." },
+        s2: { name: "Flame Pillar", dmg: 34, range: 11, cd: 4, cost: 28, desc: "Pilar api mendadak dari bawah tanah." },
+        s3: { name: "Supernova", dmg: 62, range: 16, cd: 8.5, cost: 45, desc: "Ledakan api raksasa yang membakar arena." }
+    },
+    {
+        name: "Frost Mage", color: 0x00ffff, hp: 85, speed: 9.5, type: "Mage",
+        lore: "Penguasa es abadi yang membekukan darah setiap musuh.",
+        s1: { name: "Ice Spike", dmg: 17, range: 13, cd: 1.4, cost: 14, desc: "Tusukan es tajam jarak jauh." },
+        s2: { name: "Frost Nova", dmg: 29, range: 11, cd: 3.8, cost: 24, desc: "Ledakan pembeku di sekitar penyihir." },
+        s3: { name: "Blizzard Nova", dmg: 54, range: 15, cd: 8, cost: 42, desc: "Badai es menghancurkan segala arah." }
+    },
+    {
+        name: "Electro Monk", color: 0xffff00, hp: 90, speed: 11.5, type: "Melee-Fast",
+        lore: "Biksu petir yang mengalirkan energi voltase tinggi pada tinjunya.",
+        s1: { name: "Thunder Palm", dmg: 19, range: 7, cd: 1.2, cost: 15, desc: "Tamparan petir beruntun." },
+        s2: { name: "Lightning Flash", dmg: 30, range: 10, cd: 3.5, cost: 25, desc: "Kejutan listrik tegangan tinggi." },
+        s3: { name: "Gigawatt Storm", dmg: 56, range: 14, cd: 7.5, cost: 40, desc: "Petir purba menghantam seluruh target." }
+    },
+    {
+        name: "Venom Hunter", color: 0x22aa33, hp: 90, speed: 10.5, type: "Ranged",
+        lore: "Pemburu liar pengolah racun dari hutan terlarang.",
+        s1: { name: "Poison Arrow", dmg: 16, range: 14, cd: 1.3, cost: 12, desc: "Anak panah beracun jarak jauh." },
+        s2: { name: "Toxic Spray", dmg: 27, range: 9, cd: 3.8, cost: 22, desc: "Semburan racun mematikan." },
+        s3: { name: "Acid Rain", dmg: 50, range: 15, cd: 8, cost: 38, desc: "Hujan asam racun membakar lawan." }
+    },
+    {
+        name: "Wind Walker", color: 0x88ffcc, hp: 85, speed: 12.5, type: "Agile",
+        lore: "Penjelajah angin yang bergerak tanpa meninggalkan jejak.",
+        s1: { name: "Wind Blade", dmg: 18, range: 11, cd: 1.3, cost: 14, desc: "Pisau angin memotong dari jauh." },
+        s2: { name: "Gale Blast", dmg: 28, range: 10, cd: 3.5, cost: 22, desc: "Tembakan hembusan angin kencang." },
+        s3: { name: "Tornado Burst", dmg: 55, range: 14, cd: 7.5, cost: 40, desc: "Topan angin menerjang arena." }
+    },
+    {
+        name: "Earth Guardian", color: 0x8b5a2b, hp: 160, speed: 7.5, type: "Tank",
+        lore: "Pelindung batu purba yang tak tergoyahkan oleh serangan apapun.",
+        s1: { name: "Rock Smash", dmg: 20, range: 6, cd: 1.8, cost: 15, desc: "Pukulan batu berkekuatan tinggi." },
+        s2: { name: "Earthquake", dmg: 32, range: 11, cd: 4.5, cost: 28, desc: "Guncangan gempa menghancurkan pijakan musuh." },
+        s3: { name: "Stone Cataclysm", dmg: 50, range: 13, cd: 9, cost: 42, desc: "Hujan reruntuhan batu raksasa." }
+    },
+    {
+        name: "Blood Knight", color: 0x880000, hp: 110, speed: 9.5, type: "Melee",
+        lore: "Ksatria terkutuk yang menggunakan kekuatan darah musuhnya.",
+        s1: { name: "Vampiric Slash", dmg: 20, range: 8, cd: 1.5, cost: 15, desc: "Sabetan pedang darah." },
+        s2: { name: "Crimson Surge", dmg: 31, range: 10, cd: 4, cost: 25, desc: "Gelombang darah panas merusak target." },
+        s3: { name: "Blood Siphon", dmg: 58, range: 13, cd: 8, cost: 42, desc: "Ledakan darah yang menghisap vitalitas lawan." }
+    },
+    {
+        name: "Arcane Sorcerer", color: 0xaa00ff, hp: 80, speed: 10, type: "Mage",
+        lore: "Master ilmu sihir kuno yang memanipulasi energi Arcane.",
+        s1: { name: "Arcane Bolt", dmg: 19, range: 13, cd: 1.3, cost: 15, desc: "Proyektil sihir murni." },
+        s2: { name: "Energy Shift", dmg: 30, range: 11, cd: 3.8, cost: 25, desc: "Ledakan denyut sihir raksasa." },
+        s3: { name: "Arcane Singularity", dmg: 60, range: 15, cd: 8, cost: 45, desc: "Singularitas sihir penghancur massa." }
+    },
+    {
+        name: "Solar Valkyrie", color: 0xffaa00, hp: 105, speed: 10, type: "Melee-Hybrid",
+        lore: "Pejuang wanita berbintang surya membawa keadilan matahari.",
+        s1: { name: "Solar Slash", dmg: 20, range: 8, cd: 1.5, cost: 15, desc: "Sabetan pedang berkilau surya." },
+        s2: { name: "Sun Flare", dmg: 32, range: 10, cd: 4, cost: 26, desc: "Ledakan cahaya menyilaukan." },
+        s3: { name: "Supernova Lance", dmg: 58, range: 14, cd: 8, cost: 42, desc: "Tombak surya jatuh membakar bumi." }
+    },
+    {
+        name: "Abyss Phantom", color: 0x220044, hp: 85, speed: 11.5, type: "Agile",
+        lore: "Makhluk kegelapan yang lahir dari jurang maut tanpa dasar.",
+        s1: { name: "Phantom Claw", dmg: 18, range: 7, cd: 1.2, cost: 12, desc: "Cakaran kegelapan cepat." },
+        s2: { name: "Abyssal Void", dmg: 29, range: 10, cd: 3.6, cost: 24, desc: "Serangan ruang hampa kegelapan." },
+        s3: { name: "Soul Annihilation", dmg: 57, range: 13, cd: 7.8, cost: 40, desc: "Penghancuran jiwa dari dimensi abyss." }
+    },
+    {
+        name: "Mechanic", color: 0x778899, hp: 100, speed: 9.5, type: "Ranged",
+        lore: "Insinyur genius penghasil senjata berat bertopang teknologi.",
+        s1: { name: "Plasma Shot", dmg: 18, range: 12, cd: 1.4, cost: 14, desc: "Tembakan energi plasma meledak." },
+        s2: { name: "Rocket Salvo", dmg: 30, range: 11, cd: 4, cost: 25, desc: "Luncuran roket bertubi-tubi." },
+        s3: { name: "Orbital Cannon", dmg: 60, range: 15, cd: 8.5, cost: 45, desc: "Serangan meriam laser dari satelit orbit." }
+    },
+    {
+        name: "Celestial Priest", color: 0xffffff, hp: 95, speed: 9, type: "Support-Mage",
+        lore: "Pendeta suci yang mengendalikan takdir bintang.",
+        s1: { name: "Star Beam", dmg: 16, range: 12, cd: 1.3, cost: 12, desc: "Sinar bintang suci menembus musuh." },
+        s2: { name: "Holy Pulse", dmg: 27, range: 10, cd: 3.5, cost: 20, desc: "Pulsa cahaya suci merusak arena." },
+        s3: { name: "Starfall", dmg: 52, range: 14, cd: 8, cost: 38, desc: "Hujan bintang jatuh dari galaksi." }
+    },
+    {
+        name: "Dragon Slayer", color: 0xff3300, hp: 115, speed: 10, type: "Melee",
+        lore: "Pembantai naga berwujud Manusia dengan aura naga merah.",
+        s1: { name: "Dragon Claw", dmg: 22, range: 8, cd: 1.5, cost: 16, desc: "Cakaran api naga purba." },
+        s2: { name: "Dragon Roar", dmg: 33, range: 10, cd: 4, cost: 26, desc: "Raungan naga yang mengguncang musuh." },
+        s3: { name: "Dragon Breath", dmg: 62, range: 14, cd: 8, cost: 44, desc: "Semburan napas api naga mematikan." }
+    },
+    {
+        name: "Storm Samurai", color: 0x4488ff, hp: 90, speed: 11.5, type: "Agile",
+        lore: "Pendekar pedang bertopeng yang mampu memotong badai.",
+        s1: { name: "Iaijutsu Slash", dmg: 20, range: 8, cd: 1.2, cost: 14, desc: "Tebasan kilat pedang samurai." },
+        s2: { name: "Storm Cross", dmg: 31, range: 10, cd: 3.5, cost: 24, desc: "Sabetan silang berenergi badai." },
+        s3: { name: "Thunder Blade Dance", dmg: 58, range: 13, cd: 7.5, cost: 40, desc: "Tarian tebasan pedang petir tak terhitung." }
+    },
+    {
+        name: "Plague Doctor", color: 0x445500, hp: 95, speed: 9.5, type: "Control",
+        lore: "Dokter misterius pembawa wabah penyakit menular.",
+        s1: { name: "Plague Flask", dmg: 17, range: 11, cd: 1.4, cost: 14, desc: "Lemparan botol racun wabah." },
+        s2: { name: "Miasma Cloud", dmg: 28, range: 10, cd: 3.8, cost: 22, desc: "Awan gas beracun yang meluap." },
+        s3: { name: "Black Death Pandemic", dmg: 53, range: 14, cd: 8, cost: 40, desc: "Epidemi wabah hitam menghancurkan semua musuh." }
+    },
+    {
+        name: "Spectral Archer", color: 0x55ffff, hp: 80, speed: 11, type: "Ranged",
+        lore: "Pemanah arwah penembak panah roh penembus dinding.",
+        s1: { name: "Ghost Arrow", dmg: 18, range: 15, cd: 1.2, cost: 12, desc: "Tembakan panah arwah jarak sangat jauh." },
+        s2: { name: "Phantom Volley", dmg: 29, range: 12, cd: 3.8, cost: 24, desc: "Hujan panah mistis beruntun." },
+        s3: { name: "Soul Piercer", dmg: 56, range: 16, cd: 7.8, cost: 42, desc: "Panah raksasa penembus jiwa target." }
+    },
+    {
+        name: "Titan", color: 0x555566, hp: 165, speed: 7, type: "Heavy-Tank",
+        lore: "Raksasa batu berukuran megah penguasa daratan purba.",
+        s1: { name: "Heavy Fist", dmg: 22, range: 6, cd: 1.8, cost: 16, desc: "Hantaman tinju batu berat." },
+        s2: { name: "Seismic Ground", dmg: 34, range: 10, cd: 4.5, cost: 28, desc: "Ledakan tanah pijakan gempa." },
+        s3: { name: "Titan Crush", dmg: 64, range: 12, cd: 9, cost: 46, desc: "Pijakan raksasa menghancurkan arena." }
+    },
+    {
+        name: "Chrono Shifter", color: 0x00ffaa, hp: 85, speed: 10.5, type: "Mage",
+        lore: "Pengendali garis waktu yang mampu mempercepat atau menghentikan waktu.",
+        s1: { name: "Time Bolt", dmg: 18, range: 12, cd: 1.3, cost: 14, desc: "Proyektil gelombang waktu." },
+        s2: { name: "Chrono Blast", dmg: 29, range: 10, cd: 3.8, cost: 24, desc: "Ledakan distorsi ruang waktu." },
+        s3: { name: "Temporal Collapse", dmg: 55, range: 14, cd: 8, cost: 40, desc: "Runtuhnya garis waktu yang menghancurkan musuh." }
+    },
+    {
+        name: "Infernal Demon", color: 0xff1144, hp: 110, speed: 10, type: "Melee",
+        lore: "Iblis neraka yang bangkit dari lautan lahar terbakar.",
+        s1: { name: "Demon Slash", dmg: 21, range: 8, cd: 1.4, cost: 15, desc: "Tebasan cakar iblis neraka." },
+        s2: { name: "Hellfire Burst", dmg: 32, range: 10, cd: 4, cost: 26, desc: "Semburan api neraka membakar." },
+        s3: { name: "Cataclysmic Inferno", dmg: 60, range: 14, cd: 8, cost: 44, desc: "Kiamat api neraka membumiharuskan arena." }
+    },
+    {
+        name: "Rune Templar", color: 0x3366cc, hp: 115, speed: 9, type: "Melee-Hybrid",
+        lore: "Ksatria berpedang rune bertuliskan mantra ajaib pelindung.",
+        s1: { name: "Rune Strike", dmg: 19, range: 8, cd: 1.4, cost: 14, desc: "Pukulan berenergi rune kuno." },
+        s2: { name: "Rune Shield Wave", dmg: 30, range: 10, cd: 4, cost: 24, desc: "Gelombang energi pelindung rune." },
+        s3: { name: "Rune Judgment", dmg: 55, range: 13, cd: 8, cost: 40, desc: "Sinar hukum rune berkekuatan penuh." }
+    },
+    {
+        name: "God of Arena", color: 0xffd700, hp: 130, speed: 11, type: "Supreme",
+        lore: "Dewa tertinggi yang menguasai seluruh elemen bertarung di arena.",
+        s1: { name: "Godly Slash", dmg: 24, range: 9, cd: 1.2, cost: 15, desc: "Sabetan pedang berkekuatan dewa." },
+        s2: { name: "Heaven Shock", dmg: 36, range: 11, cd: 3.5, cost: 25, desc: "Kejutan energi surgawi yang merusak." },
+        s3: { name: "Wrath of the Gods", dmg: 68, range: 15, cd: 7.5, cost: 42, desc: "Murka dewa menghancurkan semua lawan." }
+    }
+];
+
+let selectedClassIdx = 0;
+let selectedMode = "1v1";
+
+/* ======================================================
+   GLOBAL ENGINE STATE
+====================================================== */
+let scene, camera, renderer, clock;
+let player = null;
+let entities = [];
+let effects = [];
+let running = false;
+let audio = null;
+
+let bgmVolume = 0.035;
+let sfxVolume = 0.08;
+
+// PeerJS / Multiplayer Variables
+let peer = null;
+let conn = null;
+let isMultiplayer = false;
+let isHost = false;
+let myRoomId = "";
+
+const cam = {
+    yaw: 0, pitch: .4,
+    targetYaw: 0, targetPitch: .4,
+    distance: 11, pointerId: null,
+    lastX: 0, lastY: 0, moving: false
+};
+
+/* ======================================================
+   UI & HERO SELECTION LOGIC
+====================================================== */
+document.querySelectorAll(".modeBtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".modeBtn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        selectedMode = btn.getAttribute("data-mode");
+    });
+});
+
+function renderClassGrid() {
+    const grid = document.getElementById("classGrid");
+    grid.innerHTML = "";
+    CLASSES.forEach((c, idx) => {
+        const card = document.createElement("div");
+        card.className = `classCard ${idx === selectedClassIdx ? 'active' : ''}`;
+        card.innerHTML = `<b>${c.name}</b>`;
+        card.onclick = () => {
+            selectedClassIdx = idx;
+            renderClassGrid();
+            updateHeroDetail();
+        };
+        grid.appendChild(card);
+    });
+    updateHeroDetail();
+}
+
+function updateHeroDetail() {
+    const h = CLASSES[selectedClassIdx];
+    const detailBox = document.getElementById("heroDetail");
+    detailBox.innerHTML = `
+        <div class="heroTitle">
+            <span>${h.name} (${h.type})</span>
+            <span style="color:#00ff88; font-size:11px;">HP: ${h.hp} | SPD: ${h.speed}</span>
+        </div>
+        <div class="heroLore">${h.lore}</div>
+        <div class="heroSkillsList">
+            <div class="skillItem"><b>[S1] ${h.s1.name}:</b> ${h.s1.desc} (Dmg: ${h.s1.dmg})</div>
+            <div class="skillItem"><b>[S2] ${h.s2.name}:</b> ${h.s2.desc} (Dmg: ${h.s2.dmg})</div>
+            <div class="skillItem"><b>[ULTI] ${h.s3.name}:</b> ${h.s3.desc} (Dmg: ${h.s3.dmg})</div>
+        </div>
+    `;
+}
+
+/* ======================================================
+   AUDIO SYSTEM (BGM & SFX SYNTH)
+====================================================== */
+let musicTimer = null;
+let musicGain = null;
+
+function startAudio(){
+    if(!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+    if(audio.state === "suspended") audio.resume();
+}
+
+function startMusic(){
+    startAudio();
+    if(musicTimer) return;
+
+    musicGain = audio.createGain();
+    musicGain.gain.value = bgmVolume;
+    musicGain.connect(audio.destination);
+
+    const notes = [146, 164, 174, 196, 220, 196, 174, 164];
+    let i = 0;
+
+    musicTimer = setInterval(() => {
+        if(bgmVolume <= 0 || !running) return;
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.type = "sawtooth";
+        osc.frequency.value = notes[i++ % notes.length];
+        
+        gain.gain.setValueAtTime(.0001, audio.currentTime);
+        gain.gain.exponentialRampToValueAtTime(bgmVolume, audio.currentTime + .05);
+        gain.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + .4);
+
+        osc.connect(gain);
+        gain.connect(musicGain);
+        osc.start();
+        osc.stop(audio.currentTime + .45);
+    }, 400);
+}
+
+function sound(freq = 500, type = "sine", time = .15){
+    if(sfxVolume <= 0) return;
+    startAudio();
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audio.currentTime);
+    
+    gain.gain.setValueAtTime(sfxVolume, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + time);
+
+    osc.connect(gain);
+    gain.connect(audio.destination);
+    osc.start();
+    osc.stop(audio.currentTime + time);
+}
+
+/* ======================================================
+   SETTINGS LOGIC
+====================================================== */
+document.getElementById("settingsBtn").addEventListener("click", () => {
+    document.getElementById("main").classList.add("hidden");
+    document.getElementById("settingsMenu").classList.remove("hidden");
+});
+
+document.getElementById("saveSettingsBtn").addEventListener("click", () => {
+    bgmVolume = (document.getElementById("bgmVol").value / 100) * 0.1;
+    sfxVolume = (document.getElementById("sfxVol").value / 100) * 0.15;
+    // Tingkatkan skala sensitivitas kamera
+    CFG.cameraSensitivity = (document.getElementById("sensVol").value / 1000) * 0.9;
+
+    if(musicGain) musicGain.gain.value = bgmVolume;
+
+    document.getElementById("settingsMenu").classList.add("hidden");
+    document.getElementById("main").classList.remove("hidden");
+});
+
+/* ======================================================
+   MULTIPLAYER P2P ENGINE (PEERJS 1v1)
+====================================================== */
+function initPeer(customId = null) {
+    if(peer) peer.destroy();
+    peer = customId ? new Peer(customId) : new Peer();
+
+    peer.on('open', (id) => {
+        myRoomId = id;
+    });
+
+    peer.on('connection', (c) => {
+        conn = c;
+        setupConnection();
+        if(isHost) {
+            document.getElementById("startMpMatchBtn").classList.remove("hidden");
+            const subText = document.querySelector("#roomWait .sub");
+            if(subText) subText.textContent = "PLAYER 2 BERHASIL BERGABUNG!";
+        }
+    });
+}
+
+function setupConnection() {
+    conn.on('data', (data) => {
+        handleNetworkData(data);
+    });
+
+    conn.on('close', () => {
+        if(running) {
+            alert("Koneksi lawan terputus.");
+            endGame(true);
+        }
+    });
+}
+
+function handleNetworkData(data) {
+    if(data.type === "startMatch") {
+        isMultiplayer = true;
+        selectedMode = "1v1";
+        startMatch(false);
+    } 
+    else if(data.type === "syncPos") {
+        const remote = entities.find(e => e !== player);
+        if(remote && remote.mesh) {
+            remote.mesh.position.set(data.x, data.y, data.z);
+            remote.mesh.rotation.y = data.rot;
+            remote.hp = data.hp;
+        }
+    }
+    else if(data.type === "skill") {
+        const remote = entities.find(e => e !== player);
+        if(remote) {
+            triggerSkillVisual(remote, data.skillNum);
+        }
+    }
+}
+
+function sendNetworkData(data) {
+    if(conn && conn.open) {
+        conn.send(data);
+    }
+}
+
+document.getElementById("multiplayerBtn").addEventListener("click", () => {
+    document.getElementById("main").classList.add("hidden");
+    document.getElementById("mpLobby").classList.remove("hidden");
+});
+
+document.getElementById("backFromMp").addEventListener("click", () => {
+    document.getElementById("mpLobby").classList.add("hidden");
+    document.getElementById("main").classList.remove("hidden");
+});
+
+document.getElementById("createRoomBtn").addEventListener("click", () => {
+    isHost = true;
+    const randomCode = Math.floor(10000 + Math.random() * 90000).toString();
+    initPeer("AL-" + randomCode);
+    
+    document.getElementById("displayRoomCode").textContent = randomCode;
+    document.getElementById("mpLobby").classList.add("hidden");
+    document.getElementById("roomWait").classList.remove("hidden");
+    document.getElementById("startMpMatchBtn").classList.add("hidden");
+});
+
+document.getElementById("cancelRoomBtn").addEventListener("click", () => {
+    if(peer) peer.destroy();
+    document.getElementById("roomWait").classList.add("hidden");
+    document.getElementById("mpLobby").classList.remove("hidden");
+});
+
+document.getElementById("joinRoomBtn").addEventListener("click", () => {
+    const code = document.getElementById("joinRoomInput").value.trim();
+    if(code.length !== 5) {
+        alert("Masukkan 5 digit Kode Room!");
+        return;
+    }
+
+    isHost = false;
+    initPeer();
+    
+    setTimeout(() => {
+        conn = peer.connect("AL-" + code);
+        setupConnection();
+        conn.on('open', () => {
+            alert("Terhubung ke Room! Menunggu Host memulai...");
+        });
+    }, 1000);
+});
+
+document.getElementById("startMpMatchBtn").addEventListener("click", () => {
+    if(isHost && conn) {
+        sendNetworkData({ type: "startMatch" });
+        isMultiplayer = true;
+        selectedMode = "1v1";
+        startMatch(false);
+    }
+});
+
+/* ======================================================
+   THREE.JS SCENE SETUP
+====================================================== */
+function init(){
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x071522);
+    scene.fog = new THREE.FogExp2(0x071522, .007);
+
+    camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, .1, 500);
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+    renderer.shadowMap.enabled = true;
+
+    document.getElementById("game").appendChild(renderer.domElement);
+    clock = new THREE.Clock();
+
+    createLight();
+    createArena();
+    createEnvironment();
+    renderClassGrid();
+}
+
+function createLight(){
+    scene.add(new THREE.HemisphereLight(0x8ccfff, 0x26371e, 1.5));
+    const sun = new THREE.DirectionalLight(0xffe0ae, 2.2);
+    sun.position.set(-50, 80, -40);
+    sun.castShadow = true;
+    scene.add(sun);
+}
+
+function createArena(){
+    const ground = new THREE.Mesh(
+        new THREE.CircleGeometry(CFG.arena, 64),
+        new THREE.MeshStandardMaterial({ color: 0x2c5225, roughness: 1 })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+}
+
+function createEnvironment(){
+    for(let i = 0; i < 110; i++){
+        const a = Math.random() * Math.PI * 2;
+        const r = 25 + Math.random() * (CFG.arena - 30);
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+
+        const tree = new THREE.Group();
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.3, .5, 3), new THREE.MeshStandardMaterial({color: 0x70431f}));
+        trunk.position.y = 1.5;
+        const leaves = new THREE.Mesh(new THREE.ConeGeometry(2, 4.5), new THREE.MeshStandardMaterial({color: 0x1d7038}));
+        leaves.position.y = 3.8;
+        tree.add(trunk, leaves);
+        tree.position.set(x, 0, z);
+        scene.add(tree);
+    }
+}
+
+/* ======================================================
+   CHARACTER CREATION & ACCURATE RANDOM SPAWN
+====================================================== */
+function makeCharacter(color){
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(.55, 1.05, 6, 12), new THREE.MeshStandardMaterial({ color }));
+    body.position.y = 1.05;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(.42, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffc59d }));
+    head.position.y = 2.05;
+    g.add(body, head);
+    return g;
+}
+
+const usedSpawnPoints = [];
+
+function getUniqueSpawnPos(minDist = 8) {
+    let x = 0, z = 0, valid = false, attempts = 0;
+    while (!valid && attempts < 200) {
+        attempts++;
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.random() * (CFG.arena - 15);
+        x = Math.cos(a) * r;
+        z = Math.sin(a) * r;
+
+        valid = true;
+        for (const p of usedSpawnPoints) {
+            const d = Math.hypot(p.x - x, p.z - z);
+            if (d < minDist) {
+                valid = false;
+                break;
+            }
+        }
+    }
+    usedSpawnPoints.push({ x, z });
+    return { x, z };
+}
+
+function spawnEntity(classIdx, isBot, team, forcedPos = null){
+    const cData = CLASSES[classIdx];
+    const pos = forcedPos || getUniqueSpawnPos(10);
+
+    const mesh = makeCharacter(cData.color);
+    mesh.position.set(pos.x, 0, pos.z);
+    scene.add(mesh);
+
+    const e = {
+        mesh, bot: isBot, team,
+        classData: cData,
+        hp: cData.hp, maxHp: cData.hp,
+        energy: 100, speed: cData.speed,
+        cooldown: { 1: 0, 2: 0, 3: 0, dash: 0 },
+        target: null, aiTimer: 0, dead: false
+    };
+    entities.push(e);
+    return e;
+}
+
+/* ======================================================
+   MATCH CONTROL & MODE INITIALIZATION
+====================================================== */
+function startMatch(vsBot = true){
+    document.getElementById("main").classList.add("hidden");
+    document.getElementById("mpLobby").classList.add("hidden");
+    document.getElementById("roomWait").classList.add("hidden");
+    document.getElementById("result").classList.add("hidden");
+    document.getElementById("hud").classList.remove("hidden");
+
+    // Clear Previous Entities
+    for(const e of entities) scene.remove(e.mesh);
+    entities = [];
+    effects = [];
+    usedSpawnPoints.length = 0;
+
+    if(!vsBot && isMultiplayer) {
+        const p1Pos = getUniqueSpawnPos(15);
+        const p2Pos = getUniqueSpawnPos(15);
+        
+        player = spawnEntity(selectedClassIdx, false, isHost ? 0 : 1, isHost ? p1Pos : p2Pos);
+        spawnEntity(selectedClassIdx, false, isHost ? 1 : 0, isHost ? p2Pos : p1Pos);
+        
+        document.getElementById("arenaInfo").textContent = "MULTIPLAYER 1v1";
+        document.getElementById("enemyClassName").textContent = "PLAYER 2";
+    } 
+    else {
+        isMultiplayer = false;
+        
+        if (selectedMode === "1v1") {
+            player = spawnEntity(selectedClassIdx, false, 0);
+            spawnEntity(Math.floor(Math.random() * CLASSES.length), true, 1);
+            document.getElementById("arenaInfo").textContent = "MODE 1v1";
+        } 
+        else if (selectedMode === "2v2") {
+            player = spawnEntity(selectedClassIdx, false, 0);
+            spawnEntity(Math.floor(Math.random() * CLASSES.length), true, 0);
+            spawnEntity(Math.floor(Math.random() * CLASSES.length), true, 1);
+            spawnEntity(Math.floor(Math.random() * CLASSES.length), true, 1);
+            document.getElementById("arenaInfo").textContent = "MODE 2v2";
+        }
+        else if (selectedMode === "3v3") {
+            player = spawnEntity(selectedClassIdx, false, 0);
+            for(let i=0; i<2; i++) spawnEntity(Math.floor(Math.random() * CLASSES.length), true, 0);
+            for(let i=0; i<3; i++) spawnEntity(Math.floor(Math.random() * CLASSES.length), true, 1);
+            document.getElementById("arenaInfo").textContent = "MODE 3v3";
+        }
+        else if (selectedMode === "4v4") {
+            player = spawnEntity(selectedClassIdx, false, 0);
+            for(let i=0; i<3; i++) spawnEntity(Math.floor(Math.random() * CLASSES.length), true, 0);
+            for(let i=0; i<4; i++) spawnEntity(Math.floor(Math.random() * CLASSES.length), true, 1);
+            document.getElementById("arenaInfo").textContent = "MODE 4v4";
+        }
+        else if (selectedMode === "BR") {
+            player = spawnEntity(selectedClassIdx, false, 0);
+            for(let i = 1; i <= 35; i++) {
+                spawnEntity(Math.floor(Math.random() * CLASSES.length), true, i);
+            }
+            document.getElementById("arenaInfo").textContent = "BATTLE ROYALE (36)";
+        }
+        
+        document.getElementById("enemyClassName").textContent = "TARGET";
+    }
+
+    // Dynamic HUD Skill Names
+    const pData = CLASSES[selectedClassIdx];
+    document.getElementById("pClassName").textContent = pData.name;
+    document.getElementById("s1").childNodes[0].textContent = "S1";
+    document.getElementById("s2").childNodes[0].textContent = "S2";
+    document.getElementById("s3").childNodes[0].textContent = "ULTI";
+
+    running = true;
+    cam.yaw = 0; cam.targetYaw = 0;
+    cam.pitch = .4; cam.targetPitch = .4;
+
+    startAudio(); startMusic();
+}
+
+/* ======================================================
+   PLAYER MOVEMENT & CAMERA CONTROL
+====================================================== */
+const input = { x: 0, y: 0 };
+let joyPointer = null;
+
+const joystick = document.getElementById("joystick");
+const stick = document.getElementById("stick");
+
+joystick.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    joyPointer = e.pointerId;
+    joystick.setPointerCapture(e.pointerId);
+    updateJoystick(e);
+});
+
+joystick.addEventListener("pointermove", e => {
+    if(e.pointerId === joyPointer) updateJoystick(e);
+});
+
+function updateJoystick(e){
+    const rect = joystick.getBoundingClientRect();
+    let x = e.clientX - (rect.left + rect.width / 2);
+    let y = e.clientY - (rect.top + rect.height / 2);
+    const max = 40;
+    const d = Math.hypot(x, y);
+
+    if(d > max){ x = x/d*max; y = y/d*max; }
+    input.x = x / max;
+    input.y = y / max;
+    stick.style.transform = `translate3d(${x}px,${y}px,0)`;
+}
+
+function resetJoystick(){
+    joyPointer = null; input.x = 0; input.y = 0;
+    stick.style.transform = "translate3d(0,0,0)";
+}
+joystick.addEventListener("pointerup", resetJoystick);
+joystick.addEventListener("pointercancel", resetJoystick);
+
+const cameraArea = document.getElementById("cameraArea");
+cameraArea.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    cam.pointerId = e.pointerId;
+    cam.lastX = e.clientX; cam.lastY = e.clientY;
+    cam.moving = true;
+    cameraArea.setPointerCapture(e.pointerId);
+});
+
+cameraArea.addEventListener("pointermove", e => {
+    if(!cam.moving || e.pointerId !== cam.pointerId) return;
+    const dx = e.clientX - cam.lastX;
+    const dy = e.clientY - cam.lastY;
+
+    // Respon sensitivitas kamera tinggi
+    cam.targetYaw -= dx * CFG.cameraSensitivity;
+    cam.targetPitch += dy * CFG.cameraSensitivity;
+    cam.targetPitch = THREE.MathUtils.clamp(cam.targetPitch, CFG.cameraMin, CFG.cameraMax);
+
+    cam.lastX = e.clientX; cam.lastY = e.clientY;
+});
+
+function endCamera(e){
+    if(e.pointerId === cam.pointerId) cam.moving = false;
+}
+cameraArea.addEventListener("pointerup", endCamera);
+cameraArea.addEventListener("pointercancel", endCamera);
+
+function updatePlayer(dt){
+    if(!player || player.dead) return;
+    if(input.x || input.y) {
+        const forwardX = -Math.sin(cam.yaw);
+        const forwardZ = -Math.cos(cam.yaw);
+        const rightX = Math.cos(cam.yaw);
+        const rightZ = -Math.sin(cam.yaw);
+
+        const moveX = rightX * input.x + forwardX * (-input.y);
+        const moveZ = rightZ * input.x + forwardZ * (-input.y);
+
+        const len = Math.hypot(moveX, moveZ);
+        if(len > 0){
+            player.mesh.position.x += (moveX / len) * player.speed * dt;
+            player.mesh.position.z += (moveZ / len) * player.speed * dt;
+            player.mesh.rotation.y = Math.atan2(moveX, moveZ);
+        }
+        clamp(player);
+    }
+
+    if(isMultiplayer) {
+        sendNetworkData({
+            type: "syncPos",
+            x: player.mesh.position.x,
+            y: player.mesh.position.y,
+            z: player.mesh.position.z,
+            rot: player.mesh.rotation.y,
+            hp: player.hp
+        });
+    }
+}
+
+/* ======================================================
+   SMART AI BOT ENGINE (TARGET NEAREST ENEMY)
+====================================================== */
+function updateBots(dt){
+    for(const b of entities){
+        if(!b.bot || b.dead) continue;
+        
+        b.aiTimer -= dt;
+        if(b.aiTimer <= 0 || !b.target || b.target.dead){
+            b.aiTimer = 0.3 + Math.random() * 0.4;
+            
+            let nearestEnemy = null;
+            let minDist = Infinity;
+
+            for(const enemy of entities){
+                if(enemy.dead || enemy.team === b.team) continue;
+                const dist = b.mesh.position.distanceTo(enemy.mesh.position);
+                if(dist < minDist){
+                    minDist = dist;
+                    nearestEnemy = enemy;
+                }
+            }
+            b.target = nearestEnemy;
+        }
+
+        if(b.target && !b.target.dead){
+            const dx = b.target.mesh.position.x - b.mesh.position.x;
+            const dz = b.target.mesh.position.z - b.mesh.position.z;
+            const dist = Math.hypot(dx, dz);
+
+            b.mesh.rotation.y = Math.atan2(dx, dz);
+
+            if(dist > 3.5){
+                b.mesh.position.x += (dx / dist) * b.speed * dt;
+                b.mesh.position.z += (dz / dist) * b.speed * dt;
+            } 
+            else {
+                if(b.cooldown[3] === 0 && b.energy >= b.classData.s3.cost) {
+                    skillUse(b, 3);
+                } else if(b.cooldown[2] === 0 && b.energy >= b.classData.s2.cost) {
+                    skillUse(b, 2);
+                } else if(b.cooldown[1] === 0 && b.energy >= b.classData.s1.cost) {
+                    skillUse(b, 1);
+                } else if(b.cooldown.dash === 0 && Math.random() < 0.05) {
+                    dashUse(b);
+                }
+            }
+        }
+        clamp(b);
+    }
+}
+
+function clamp(e){
+    const d = Math.hypot(e.mesh.position.x, e.mesh.position.z);
+    if(d > CFG.arena - 2){
+        e.mesh.position.x = (e.mesh.position.x / d) * (CFG.arena - 2);
+        e.mesh.position.z = (e.mesh.position.z / d) * (CFG.arena - 2);
+    }
+}
+
+/* ======================================================
+   SKILLS & COMBAT LOGIC WITH UNIQUE STATS
+====================================================== */
+function skillUse(e, n){
+    if(!e || e.dead || e.cooldown[n] > 0) return;
+    const sData = e.classData["s" + n];
+
+    if(e.energy < sData.cost) return;
+
+    e.energy -= sData.cost;
+    e.cooldown[n] = sData.cd;
+
+    damageEnemies(e, sData.range, sData.dmg);
+    triggerSkillVisual(e, n);
+
+    if(isMultiplayer && e === player) {
+        sendNetworkData({ type: "skill", skillNum: n });
+    }
+}
+
+function triggerSkillVisual(e, n) {
+    const col = e.classData.color;
+    if(n === 1){
+        sound(420, "square", .1);
+        slashEffect(e, col);
+    } else if(n === 2){
+        sound(260, "sawtooth", .2);
+        waveEffect(e, col);
+    } else if(n === 3){
+        sound(110, "triangle", .45);
+        burstEffect(e, col);
+    }
+}
+
+function dashUse(e){
+    if(!e || e.dead || e.cooldown.dash > 0 || e.energy < 20) return;
+    e.energy -= 20;
+    e.cooldown.dash = 2;
+
+    const f = new THREE.Vector3(Math.sin(e.mesh.rotation.y), 0, Math.cos(e.mesh.rotation.y));
+    e.mesh.position.add(f.multiplyScalar(8));
+    clamp(e);
+    sound(700, "sine", .1);
+}
+
+function damageEnemies(attacker, radius, damage){
+    for(const t of entities){
+        if(t === attacker || t.dead || t.team === attacker.team) continue;
+        const d = attacker.mesh.position.distanceTo(t.mesh.position);
+        if(d <= radius){
+            t.hp -= damage;
+            if(attacker === player) showDamage(damage);
+            if(t.hp <= 0){
+                t.hp = 0; 
+                t.dead = true;
+                t.mesh.rotation.x = -Math.PI/2;
+            }
+        }
+    }
+    checkWinner();
+}
+
+function slashEffect(e, color){
+    const mesh = new THREE.Mesh(new THREE.TorusGeometry(2, .15, 8, 24, Math.PI), new THREE.MeshBasicMaterial({ color }));
+    mesh.position.copy(e.mesh.position).add(new THREE.Vector3(0,1.2,0));
+    mesh.rotation.x = Math.PI/2;
+    mesh.rotation.z = e.mesh.rotation.y;
+    addEffect(mesh, .25);
+}
+
+function waveEffect(e, color){
+    const mesh = new THREE.Mesh(new THREE.RingGeometry(.5, 3.5, 32), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }));
+    mesh.rotation.x = -Math.PI/2;
+    mesh.position.copy(e.mesh.position).add(new THREE.Vector3(0,.1,0));
+    addEffect(mesh, .4);
+}
+
+function burstEffect(e, color){
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 16), new THREE.MeshBasicMaterial({ color, wireframe: true }));
+    mesh.position.copy(e.mesh.position).add(new THREE.Vector3(0,1,0));
+    addEffect(mesh, .5);
+}
+
+function addEffect(mesh, time){
+    scene.add(mesh);
+    effects.push({ mesh, time });
+}
+
+function updateEffects(dt){
+    for(let i = effects.length - 1; i >= 0; i--){
+        const ef = effects[i];
+        ef.time -= dt;
+        ef.mesh.scale.multiplyScalar(1 + dt * 3);
+        if(ef.time <= 0){
+            scene.remove(ef.mesh);
+            effects.splice(i, 1);
+        }
+    }
+}
+
+/* ======================================================
+   CAMERA & HUD UPDATE
+====================================================== */
+function updateCamera(dt){
+    if(!player || !player.mesh) return;
+
+    cam.yaw = THREE.MathUtils.damp(cam.yaw, cam.targetYaw, CFG.cameraSmooth, dt);
+    cam.pitch = THREE.MathUtils.damp(cam.pitch, cam.targetPitch, CFG.cameraSmooth, dt);
+
+    const target = player.mesh.position.clone();
+    target.y += 1.55;
+
+    const offset = new THREE.Vector3(
+        Math.sin(cam.yaw) * Math.cos(cam.pitch) * cam.distance,
+        Math.sin(cam.pitch) * cam.distance,
+        Math.cos(cam.yaw) * Math.cos(cam.pitch) * cam.distance
+    );
+
+    const desired = target.clone().add(offset);
+    camera.position.lerp(desired, 1 - Math.exp(-12 * dt));
+    camera.lookAt(target);
+}
+
+function updateHUD(){
+    if(!player) return;
+    document.getElementById("myHP").style.width = Math.max(0, (player.hp / player.maxHp * 100)) + "%";
+    document.getElementById("myEnergy").style.width = player.energy + "%";
+
+    let closestEnemy = null;
+    let minDist = Infinity;
+    for(const e of entities){
+        if(e.dead || e.team === player.team) continue;
+        const d = player.mesh.position.distanceTo(e.mesh.position);
+        if(d < minDist){
+            minDist = d;
+            closestEnemy = e;
+        }
+    }
+
+    if(closestEnemy) {
+        document.getElementById("enemyHP").style.width = Math.max(0, (closestEnemy.hp / closestEnemy.maxHp * 100)) + "%";
+    } else {
+        document.getElementById("enemyHP").style.width = "0%";
+    }
+
+    updateCD("s1", player.cooldown[1]);
+    updateCD("s2", player.cooldown[2]);
+    updateCD("s3", player.cooldown[3]);
+    updateCD("dash", player.cooldown.dash);
+}
+
+function updateCD(id, val){
+    const cd = document.getElementById(id).querySelector(".cd");
+    if(val > 0){
+        cd.classList.remove("hidden");
+        cd.textContent = val.toFixed(1);
+    } else cd.classList.add("hidden");
+}
+
+function showDamage(n){
+    const d = document.getElementById("damage");
+    d.textContent = "-" + Math.round(n);
+    setTimeout(() => { d.textContent = ""; }, 250);
+}
+
+/* ======================================================
+   MATCH RESULT CHECKER
+====================================================== */
+function checkWinner(){
+    if(!running) return;
+
+    if(player.dead) {
+        endGame(false);
+        return;
+    }
+
+    const activeTeams = new Set(entities.filter(x => !x.dead).map(x => x.team));
+    if(activeTeams.size === 1 && activeTeams.has(player.team)){
+        endGame(true);
+    }
+}
+
+function endGame(win){
+    running = false;
+    document.getElementById("hud").classList.add("hidden");
+    document.getElementById("result").classList.remove("hidden");
+
+    if(win){
+        document.getElementById("resultTitle").textContent = "VICTORY";
+        document.getElementById("resultText").textContent = selectedMode === "BR" ? "Kamu Menjadi Champion Battle Royale!" : "Tim Kamu Memenangkan Pertandingan!";
+    } else {
+        document.getElementById("resultTitle").textContent = "DEFEAT";
+        document.getElementById("resultText").textContent = "Kamu Tereliminasi dalam Arena.";
+    }
+}
+
+/* ======================================================
+   LISTENERS
+====================================================== */
+document.getElementById("playBtn").addEventListener("pointerdown", () => startMatch(true));
+document.getElementById("again").addEventListener("pointerdown", () => startMatch(!isMultiplayer));
+document.getElementById("menuAgain").addEventListener("pointerdown", () => {
+    document.getElementById("result").classList.add("hidden");
+    document.getElementById("main").classList.remove("hidden");
+});
+
+document.getElementById("s1").addEventListener("pointerdown", e => { e.preventDefault(); skillUse(player, 1); });
+document.getElementById("s2").addEventListener("pointerdown", e => { e.preventDefault(); skillUse(player, 2); });
+document.getElementById("s3").addEventListener("pointerdown", e => { e.preventDefault(); skillUse(player, 3); });
+document.getElementById("dash").addEventListener("pointerdown", e => { e.preventDefault(); dashUse(player); });
+
+window.addEventListener("resize", () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+});
+
+/* ======================================================
+   GAME LOOP
+====================================================== */
+function animate(){
+    requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), .033);
+
+    if(running){
+        updatePlayer(dt);
+        updateBots(dt);
+
+        for(const e of entities){
+            if(e.dead) continue;
+            e.energy = Math.min(100, e.energy + 12 * dt);
+            for(const k in e.cooldown) e.cooldown[k] = Math.max(0, e.cooldown[k] - dt);
+        }
+
+        updateEffects(dt);
+        updateCamera(dt);
+        updateHUD();
+    }
+
+    renderer.render(scene, camera);
+}
+
+init();
+animate();
+</script>
+</body>
+</html>
